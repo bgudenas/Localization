@@ -5,17 +5,16 @@ author: "Brian Gudenas"
 date: "February 16, 2018"
 output: word_document
 ---
-
+#Prediction of LncRNA Subcellular Localization with Deep Learning from Sequence
 
 
 ```{r setup, include=FALSE}
 library(knitr)
-knitr::opts_chunk$set(echo = TRUE)
-knitr::opts_chunk$set(message = FALSE)
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, cache = TRUE)
 opts_knit$set(root.dir = "..")
 ```
 
-```{r Libraries, message = FALSE, warning = FALSE}
+```{r Libraries, warning = FALSE}
 library(readr)
 library(stringr)
 library(sleuth)
@@ -27,7 +26,7 @@ library(pheatmap)
 
 ## Load Metadata
 
-```{r metadata, message = FALSE, warning = FALSE}
+```{r metadata,  warning = FALSE}
 ## load Sample Metadata 
 samples = read_tsv("./Data/Meta/metadata.tsv")
 colnames(samples) = make.names(colnames(samples))
@@ -85,7 +84,7 @@ write.csv(s2c, "./Data/Meta/Sample_Meta.csv")
 Perform differential transcript expression analysis for each cell type. If a cell type contains more than a single RNA library construction protocol then we utilize library type as a covariate in the DTE test.
 
 
-```{r DTE_loop, cache = TRUE, warning = FALSE, message= FALSE}
+```{r DTE_loop,  warning = FALSE}
 
 master =c()
 for ( i in unique(s2c$cell)){
@@ -179,7 +178,6 @@ for (i in 1:nrow(lncRNAs)){
   mat[rownames(mat) == target, colnames(mat) == celltype] = l2fc
 }
 
-
 div_cols = unlist(list(color = brewer.pal(11, "RdYlBu")))[11:1]
 
 mat2 = mat
@@ -188,23 +186,14 @@ mat2[mat2 <= -5] = -5
 mat_breaks = c(min(mat2, na.rm = TRUE), -3, -1,  0,  1, 3, 6 ,max(mat2, na.rm = TRUE))
 div_cols = div_cols[c(1,2,3,7,9,10,11)]
 
-
-
-
-#pdf("./Figures/lncRNA_heatmap.pdf", onefile = TRUE)
 pheatmap(mat2, cluster_rows = FALSE, cluster_cols = TRUE, labels_row = "", breaks = mat_breaks, color = div_cols, legend_breaks = c(-3, -1,0, 1, 3,6, max(mat2, na.rm = TRUE)), legend_labels = c(-3, -1, 0, 1, 3,6, "L2FC\n"), cex = 1.2 ) 
 
 rm(mat2)
-#dev.off()
-
-
-#table(rowMeans(mat, na.rm = TRUE) < 0)
 
 wts = table(s2c$cell)/nrow(s2c)
 wts = wts[order(names(wts)) ]
 
 mat = mat[ , order(colnames(mat))]
-
 
 df = data.frame(target_id = rownames(mat))
 df$l2fc = NA
@@ -213,8 +202,6 @@ for (i in 1:nrow(mat)){
   
   df$l2fc[i] = weighted.mean(mat[i,], wts, na.rm = TRUE)
 }
-
-
 ```
 
 ## Feature Extraction
@@ -225,8 +212,6 @@ trans = GetSeq(df$target_id)
 trans = cbind(df$l2fc[match(trans$ensembl_transcript_id, df$target_id)], trans)
 colnames(trans)[1] = "l2fc"
 df = FeatureExtract(trans)
-
-
 
 ```
 
@@ -263,7 +248,6 @@ table(duplicated(c(rownames(res$train), rownames(res$test), rownames(res$validat
 
 # Save final dataframes
 saveRDS(res, "./Data/Training_frames.rds")
-
 ```
 
 ## Deep Learning
@@ -283,8 +267,7 @@ hyper_params <- list(
                 l2 = c(1e-6,1e-5,1e-4, 1e-3, 0)
   )
   
-  
-  search_criteria = list(strategy = "RandomDiscrete", max_models = 800, seed=54321, stopping_rounds=10, stopping_tolerance=1e-3)
+search_criteria = list(strategy = "RandomDiscrete", max_models = 800, seed=54321, stopping_rounds=10, stopping_tolerance=1e-3)
   
   dl_random_grid <- h2o.grid(
     algorithm="deeplearning",
@@ -301,12 +284,12 @@ hyper_params <- list(
     search_criteria = search_criteria
   )
   
-  grid <- h2o.getGrid("dl_grid",sort_by="max_per_class_error", decreasing=FALSE)
+grid <- h2o.getGrid("dl_grid",sort_by="max_per_class_error", decreasing=FALSE)
   
-  best_model <- h2o.getModel(grid@model_ids[[1]])
+best_model <- h2o.getModel(grid@model_ids[[1]])
  
-  h2o.saveModel(best_model, path="./Model/", force=TRUE)
-  h2o.shutdown(FALSE)
+h2o.saveModel(best_model, path="./Model/", force=TRUE)
+h2o.shutdown(FALSE)
   
 ```
 
@@ -334,8 +317,6 @@ rf <- caret::train(Loc ~ ., data = res$train, method = "rf",
                            tuneLength = 5,
                            ntree = 101)
 
-
-
 stopCluster(cluster)
 registerDoSEQ()
 
@@ -347,6 +328,8 @@ registerDoSEQ()
  
 ```{r, model_comparison}
 load(file = "./Data/ML_models.RData")
+library(h2o)
+library(caret)
 
 
 localH2O = h2o.init(ip="localhost", port = 54321, startH2O = TRUE, nthreads = 1, max_mem_size = "2G")
@@ -391,13 +374,11 @@ ggplot(data = valid_mets, aes(as.factor(Model), Value, fill = Metric) ) +
   theme(axis.text=element_text(size=13),
   axis.title=element_text(size=14,face="bold"), legend.title = element_text(size=12,face="bold"))
 ggsave("./Figures/Model_Comparison.pdf")
-
 ```
 
 ## Model evalutation on test set
 
 ```{r, ROC}
-
 dnn_test = predict(DNN, test_hex)
 rf_test = predict(rf, res$test, "prob")
 svm_test = predict(svm_radial, res$test, "prob")
@@ -429,7 +410,6 @@ legend(0.35, 0.25, legend=c("DNN", "RF", "SVM","Random Guess"),
 ## Test set performance metrics
 
 ```{r, testset_metrics}
-
 rf_test = predict(rf, res$test)
 rf_conf = confusionMatrix(rf_test, res$test$Loc, positive = "Nuclear")
 
@@ -448,14 +428,11 @@ dnn_mcc = mltools::mcc(preds = as.numeric(as.factor(as.vector(DNN_test$predict))
 
 test_mets$MCC = c(rf_mcc, svm_mcc, dnn_mcc)
 write.csv(round(test_mets, 3), "./Data/test_metrics.csv")
-
 ```
 
 ## Differentially localized lncRNA heatmap
 
 ```{r, lncRNA_heatmap}
-
-
 mat_match = match(rownames(mat), rownames(df))
 mat = mat[!is.na(mat_match), ]
 
@@ -469,7 +446,6 @@ div_cols = div_cols[c(1,2,3,7,8,10,11)]
 mat2 = mat2[order(rowMeans(mat2, na.rm = TRUE), decreasing = TRUE), ]
 
 pheatmap(mat2, cluster_rows = FALSE , cluster_cols = TRUE, labels_row = "", breaks = mat_breaks, color = div_cols, legend_breaks = c(-3, -1,0, 1, 3,5, max(mat2, na.rm = TRUE)), legend_labels = c(-3, -1, 0, 1, 3,5, "L2FC\n"), cex = 1.2 ) 
-
 ```
 
 
@@ -483,7 +459,10 @@ preds = DeepLocal(Gdf)
 Gdf = cbind(preds, Gdf)
 Gdf$transcript_biotype = Gtrans$transcript_biotype
 
-# 
+## check overall predictions
+table(preds$predict)
+
+ 
 pos = Gdf %>%
   group_by(transcript_biotype) %>%
   summarise(avg = (sum(predict == "Nuclear")/n())*100, count = n()) %>%
@@ -499,31 +478,34 @@ Gdf %>%
   arrange(desc(avg)) %>% 
   ggplot( aes(x = as.factor(transcript_biotype), avg, fill = as.factor(transcript_biotype))) +
   geom_bar(stat="identity", position = "dodge") +
-  xlab("LncRNA  biotype") +
+  xlab("") +
   ylab("% Nuclear") +
   coord_flip() +
   geom_hline(yintercept = 50, col = "red", lwd = 1) +
   scale_x_discrete(limits = pos) +
   guides(fill=FALSE) +
-  theme_bw(base_size = 14)
+  theme_bw(base_size = 18)
 ggsave("./Figures/genomic_biotype_loc.pdf")
-
 
 ```
 
+Predictions on lncRNAs with known  localizations
+
 ```{r, known_locs}
+library(dplyr)
+library(reshape2)
+library(ggplot2)
 # annots ------------------------------------------------------------------
 known = read.csv("./Data/annotated_lncRNAs.csv")
 source("./src/DeepLocal.R")
 trans = Gene2Transcript(known$ID)
-
 
 transM = Gene2Transcript(known$ID[known$Species == "Mouse"], martID = "mmusculus_gene_ensembl")
 seqM = GetSeq(transM$ensembl_transcript_id, martID = "mmusculus_gene_ensembl")
 
 Borg = seqM
 Borg$ensembl_transcript_id = "BORG"
-Borg$cdna = stringr::str_replace_all(known$seq[8], "\n","")
+Borg$cdna = stringr::str_replace_all(known$seq[6], "\n","")
 Borg$transcript_length = nchar(as.character(Borg$cdna))
 Borg$GC_content = sum(oligonucleotideFrequency(DNAString(Borg$cdna), 1)[c(2,3)])/ sum(oligonucleotideFrequency(DNAString(Borg$cdna), 1))
 
@@ -535,22 +517,47 @@ fullseq = fullseq %>% filter(transcript_biotype != "protein_coding") %>%
   filter(transcript_biotype != "nonsense_mediated_decay") %>% 
   filter(transcript_length >= 200)
 
-
 df = FeatureExtract(fullseq)
-preds = DeepLocal(df)
 
 trans = rbind(transM, trans, c("BORG","BORG","lincRNA"))
+
+################
+#build new DNN excluding all known LncRNAs from train/valid set
+ res$train = res$train[is.na(match(rownames(res$train), trans$ensembl_transcript_id)), ]
+res$validate = res$validate[is.na(match(rownames(res$validate), trans$ensembl_transcript_id)), ]
+
+library(h2o)
+localH2O = h2o.init(ip="localhost", port = 54321, startH2O = TRUE, nthreads = -1, max_mem_size = "15G")
+train_hex = as.h2o(res$train[ ,-1])
+valid_hex = as.h2o(res$validate[ ,-1])
+
+DNN = h2o.deeplearning(
+    training_frame=train_hex,
+    validation_frame = valid_hex,
+    x=1:1582,
+    y=1583,
+    epochs= 2000,
+    stopping_metric="misclassification",
+    stopping_tolerance=1e-3,        
+    stopping_rounds=10,
+    activation = "RectifierWithDropout",
+    hidden = c(64,32,16),
+    input_dropout_ratio = 0.3,
+    l1 = 1e-3,
+    l2 = 1e-5)
+
+preds = predict(DNN, as.h2o(df))
+preds = as.data.frame(preds)
+rownames(preds) = df$ensembl_transcript_id
 
 preds$gene = trans$ensembl_gene_id[match(rownames(preds), trans$ensembl_transcript_id)]
 preds$name = known$Name[match(preds$gene, known$ID)]
 preds$Loc = known$Localized[match(preds$gene, known$ID)]
 
-library(dplyr)
-
 meds = preds %>% 
   group_by(gene) %>% 
-  #summarise(Nuclear = median(Nuclear) )
   summarise(Nuclear = sum(predict == "Nuclear")/n()) 
+
 meds$Loc = known$Localized[match(meds$gene, known$ID)]
 meds = meds[order(meds$Loc), ]
 meds$Cytosol = 1-meds$Nuclear
@@ -574,8 +581,6 @@ ggplot(medL, aes(x = Name, value, fill = as.factor(variable))) +
   theme_bw() +
   theme(axis.text.y=element_text(colour = colvec, size = 12))
 ggsave("./Figures/annotated_lncRNAs.pdf", width = 5, height = 7, units = "in")
-
-
 
 ```
 
