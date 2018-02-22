@@ -1,5 +1,4 @@
-
-# DeepLocal.R -------------------------------------------------------------
+# DeepLncRNA.R -------------------------------------------------------------
 # Brian Gudenas
 # 2/15/18
 
@@ -122,7 +121,7 @@ FeatureExtract = function(map){
 }
 
 
-DeepLocal = function(df){
+DeepLncRNA = function(df){
   library(h2o)
   localH2O = h2o.init(ip="localhost", port = 54321, startH2O = TRUE, nthreads = 1, max_mem_size = "1G")
   DNN = h2o.loadModel("./Data/Models/dlgrid_model_483")
