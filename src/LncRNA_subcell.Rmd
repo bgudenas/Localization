@@ -1,6 +1,5 @@
 ---
-title: Prediction of LncRNA Subcellular Localization with Deep Learning from Sequence
-  Features
+title: Prediction of LncRNA Subcellular Localization with Deep Learning from Sequence Features
 author: "Brian Gudenas"
 date: "February 16, 2018"
 output: word_document
