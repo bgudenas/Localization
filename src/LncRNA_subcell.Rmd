@@ -308,7 +308,6 @@ load(file = "./Data/ML_models.RData")
 library(h2o)
 library(caret)
 
-
 localH2O = h2o.init(ip="localhost", port = 54321, startH2O = TRUE, nthreads = 1, max_mem_size = "2G")
 #DNN = h2o.loadModel("./Data/dl_grid_model_190")
 DNN = h2o.loadModel("./Data/Models/dlgrid_model_483")
@@ -404,7 +403,9 @@ svm_mcc = mltools::mcc(preds = as.numeric(svm_test)-1, actuals = as.numeric(res$
 dnn_mcc = mltools::mcc(preds = as.numeric(as.factor(as.vector(DNN_test$predict)))-1, actuals = as.numeric(res$test$Loc)-1)
 
 test_mets$MCC = c(rf_mcc, svm_mcc, dnn_mcc)
+print(round(test_mets, 3))
 write.csv(round(test_mets, 3), "./Data/test_metrics.csv")
+h2o.shutdown(FALSE)
 
 ```
 
@@ -425,9 +426,10 @@ div_cols = div_cols[c(1,2,3,7,8,10,11)]
 
 mat2 = mat2[order(rowMeans(mat2, na.rm = TRUE), decreasing = TRUE), ]
 
-pdf("./Figures/lncRNA_heatmap.pdf")
+#pdf("./Figures/lncRNA_heatmap.pdf")
+# fig looks diff in rmarkdown, plot to PDF for published version
 pheatmap(mat2, cluster_rows = FALSE , cluster_cols = TRUE, labels_row = "", breaks = mat_breaks, color = div_cols, legend_breaks = c(-3, -1,0, 1, 3,5, max(mat2, na.rm = TRUE)), legend_labels = c(-3, -1, 0, 1, 3,5, "L2FC\n"), cex = 1.2 ) 
-dev.off()
+#dev.off()
 ```
 
 
