@@ -425,8 +425,9 @@ div_cols = div_cols[c(1,2,3,7,8,10,11)]
 
 mat2 = mat2[order(rowMeans(mat2, na.rm = TRUE), decreasing = TRUE), ]
 
+pdf("./Figures/lncRNA_heatmap.pdf")
 pheatmap(mat2, cluster_rows = FALSE , cluster_cols = TRUE, labels_row = "", breaks = mat_breaks, color = div_cols, legend_breaks = c(-3, -1,0, 1, 3,5, max(mat2, na.rm = TRUE)), legend_labels = c(-3, -1, 0, 1, 3,5, "L2FC\n"), cex = 1.2 ) 
-
+dev.off()
 ```
 
 
